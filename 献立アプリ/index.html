@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>献立管理アプリ</title>
+<style>
+:root{--primary:#e8834a;--pd:#c9642e;--sec:#4a9e8e;--bg:#faf8f5;--card:#fff;--tx:#2d2d2d;--tl:#777;--border:#e8e0d5;--fish:#4a7fb5;--meat:#c0534a;--sh:0 2px 12px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Helvetica Neue',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);display:flex;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,.06)}
+.nav-btn{flex:1;padding:8px 2px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:none;color:var(--tl);font-size:9px;cursor:pointer;transition:color .2s}
+.nav-btn.active{color:var(--primary)}
+.nav-btn svg{width:22px;height:22px}
+.page{display:none;padding:16px 16px 88px;max-width:480px;margin:0 auto}
+.page.active{display:block}
+.page-header{font-size:20px;font-weight:700;margin-bottom:16px}
+.section{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:var(--sh)}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title{font-size:12px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px}
+/* Excluded tags (editable) */
+.excl-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.excl-tag{background:#fde8e8;color:var(--meat);border-radius:20px;padding:4px 10px 4px 12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:5px}
+.excl-tag .x{cursor:pointer;color:#e08080;font-size:15px;line-height:1;font-weight:700}
+.excl-tag .x:hover{color:var(--meat)}
+.excl-add-row{display:flex;gap:8px}
+.excl-input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;font-size:14px;outline:none;background:var(--bg)}
+.excl-input:focus{border-color:var(--meat)}
+.btn-excl-add{background:#fde8e8;color:var(--meat);border:1.5px solid #f5b8b8;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-excl-add:active{background:#fbd0d0}
+/* Regular tags */
+.tag-row{display:flex;gap:8px;margin-bottom:10px}
+.tag-input{flex:1;border:1.5px solid var(--border);border-radius:10px;padding:9px 13px;font-size:15px;outline:none;background:var(--bg)}
+.tag-input:focus{border-color:var(--primary)}
+.btn-sm{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn-sm:active{background:var(--pd)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;min-height:6px}
+.tag{background:#eef6f4;color:var(--sec);border-radius:20px;padding:5px 10px 5px 12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:5px}
+.tag .x{cursor:pointer;color:#aaa;font-size:15px;line-height:1}
+/* Recommend */
+.btn-shuffle{font-size:12px;font-weight:600;color:var(--primary);background:#fff5ee;border:1px solid #f5c4a4;border-radius:8px;padding:4px 10px;cursor:pointer}
+.rc-cat{font-size:11px;font-weight:700;color:var(--tl);margin:10px 0 6px}
+.rc-chips{display:flex;flex-wrap:wrap;gap:7px}
+.rc-chip{border-radius:20px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--tl);transition:all .15s;user-select:none}
+.rc-chip.sel{background:var(--primary);border-color:var(--primary);color:#fff}
+.rc-count{font-size:12px;color:var(--primary);font-weight:600}
+.btn-gen{width:100%;background:var(--primary);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 4px 16px rgba(232,131,74,.35);transition:transform .1s}
+.btn-gen:active{transform:scale(.98)}
+/* Plan */
+.pfc-summary{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:var(--sh)}
+.pfc-summary h3{font-size:12px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.pfc-sum-row{display:flex;gap:10px;margin-bottom:8px}
+.pfc-sum-box{flex:1;background:var(--bg);border-radius:10px;padding:10px 12px}
+.pfc-sum-box .who{font-size:11px;color:var(--tl);margin-bottom:2px}
+.pfc-sum-box .avg-kcal{font-size:17px;font-weight:700;color:var(--primary)}
+.pfc-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;margin:5px 0 3px}
+.pp{background:#4a9e8e}.pf{background:#f5a978}.pc{background:#f5c842}
+.pfc-label{font-size:11px;color:var(--tl)}
+.btn-save{width:100%;background:#f0faf7;color:var(--sec);border:1.5px solid var(--sec);border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px}
+.btn-save:active{background:#d9f2ec}
+/* Day cards */
+.day-card{background:var(--card);border-radius:16px;margin-bottom:14px;box-shadow:var(--sh);overflow:hidden}
+.day-hd{padding:14px 16px 12px;display:flex;align-items:flex-start;justify-content:space-between;cursor:pointer}
+.day-label{font-size:16px;font-weight:700;flex-shrink:0;margin-right:8px;padding-top:2px}
+.day-meta{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;align-items:center;flex:1}
+.badge{font-size:10px;font-weight:700;border-radius:10px;padding:2px 8px}
+.bf{background:#dceeff;color:var(--fish)}
+.bm{background:#ffe4e2;color:var(--meat)}
+.bc{background:#f3efe8;color:#888}
+.bt{font-size:10px;color:var(--tl);background:var(--bg);border-radius:10px;padding:2px 8px}
+.stars{font-size:13px;color:#f5a978}
+.chev{font-size:11px;color:var(--tl);transition:transform .25s;flex-shrink:0;margin-left:4px;padding-top:3px}
+.day-card.open .chev{transform:rotate(180deg)}
+.day-body{padding:0 16px 16px;display:none}
+.day-card.open .day-body{display:block}
+.cal-row{display:flex;gap:10px;margin-bottom:14px}
+.cal-box{flex:1;background:var(--bg);border-radius:10px;padding:10px 12px}
+.cal-box .who{font-size:11px;color:var(--tl);margin-bottom:2px}
+.cal-box .kcal{font-size:17px;font-weight:700;color:var(--primary)}
+.cal-box .pfc-l{font-size:11px;color:var(--tl);margin-top:3px}
+.sub{font-size:11px;font-weight:700;color:var(--tl);text-transform:uppercase;letter-spacing:.5px;margin:13px 0 7px;display:flex;align-items:center;gap:6px}
+.ichips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.ichip{background:#f0f7f5;color:var(--sec);border-radius:7px;padding:3px 9px;font-size:12px}
+.season-box{background:#fffaf6;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.9;color:var(--tx);border-left:3px solid var(--primary)}
+.steps{list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:10px;margin-bottom:9px;font-size:14px;line-height:1.6}
+.steps li::before{content:counter(s);min-width:23px;height:23px;background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px}
+.dish-name{font-size:16px;font-weight:700;margin-bottom:4px}
+.protein-tag{display:inline-block;background:#fff3e0;color:var(--primary);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:8px}
+.miso-block,.side-block{background:var(--bg);border-radius:12px;padding:12px;margin-top:12px}
+.miso-title,.side-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--tx)}
+/* Shopping */
+.shop-cat{background:var(--card);border-radius:16px;margin-bottom:14px;box-shadow:var(--sh);overflow:hidden}
+.shop-cat-hd{padding:14px 16px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.shop-cnt{font-size:12px;font-weight:500;color:var(--tl);background:var(--bg);border-radius:10px;padding:2px 8px}
+.shop-items{padding:0 16px 14px}
+.shop-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.shop-item:last-child{border-bottom:none}
+.shop-item input[type=checkbox]{width:20px;height:20px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+.shop-item label{font-size:14px;cursor:pointer;flex:1}
+.shop-item.chk label{text-decoration:line-through;color:var(--tl)}
+.shop-amts{text-align:right;flex-shrink:0}
+.shop-amt1{font-size:11px;color:var(--tl)}
+.shop-amt2{font-size:12px;font-weight:600;color:var(--tx)}
+.btn-clear{width:100%;background:var(--bg);color:var(--tl);border:1.5px solid var(--border);border-radius:14px;padding:14px;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
+/* History */
+.hist-entry{background:var(--card);border-radius:16px;margin-bottom:14px;box-shadow:var(--sh);overflow:hidden}
+.hist-hd{padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.hist-date{font-size:14px;font-weight:700}
+.hist-body{padding:0 16px 14px;display:none}
+.hist-body.open{display:block}
+.hist-dish{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+.hist-dish:last-child{border-bottom:none}
+.hist-day{font-size:11px;font-weight:700;color:var(--tl);width:28px;flex-shrink:0}
+.btn-del{font-size:12px;color:var(--tl);background:none;border:1px solid var(--border);border-radius:8px;padding:3px 8px;cursor:pointer}
+/* Loading */
+.loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,.92);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.loading.show{display:flex}
+.spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-size:16px;font-weight:700;color:var(--primary)}
+.load-sub{font-size:13px;color:var(--tl)}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2d2d2d;color:#fff;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:600;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:40px 20px;color:var(--tl)}
+.empty svg{width:56px;height:56px;margin-bottom:12px;opacity:.3}
+.empty p{font-size:15px}
+</style>
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="load-txt">献立を生成中...</div>
+  <div class="load-sub" id="load-sub">食材を分析しています</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Ingredients -->
+<div class="page active" id="page-ingredients">
+  <div class="page-header">🥘 食材入力</div>
+
+  <div class="section">
+    <div class="sec-hd"><div class="sec-title">除外食材</div><div style="font-size:11px;color:var(--tl)">タップで削除</div></div>
+    <div class="excl-list" id="excl-tags"></div>
+    <div class="excl-add-row">
+      <input class="excl-input" id="excl-input" placeholder="除外したい食材を追加..." type="text">
+      <button class="btn-excl-add" onclick="addExcl()">追加</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hd"><div class="sec-title">今ある食材</div></div>
+    <div class="tag-row">
+      <input class="tag-input" id="have-input" placeholder="例：鶏もも肉、豆腐..." type="text">
+      <button class="btn-sm" onclick="addTag('have')">追加</button>
+    </div>
+    <div class="tags" id="have-tags"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hd"><div class="sec-title">追加したい食材・リクエスト</div></div>
+    <div class="tag-row">
+      <input class="tag-input" id="want-input" placeholder="例：サーモン、麻婆豆腐..." type="text">
+      <button class="btn-sm" onclick="addTag('want')">追加</button>
+    </div>
+    <div class="tags" id="want-tags"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-hd">
+      <div>
+        <div class="sec-title">おすすめ食材</div>
+        <div style="font-size:11px;color:var(--tl);margin-top:2px">タップして選択・解除</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="rc-count" id="rc-count" style="display:none"></span>
+        <button class="btn-shuffle" onclick="shuffleRec()">🔀 シャッフル</button>
+      </div>
+    </div>
+    <div class="rc-cat">🐟 魚介</div><div class="rc-chips" id="rc-fish"></div>
+    <div class="rc-cat">🥩 肉</div><div class="rc-chips" id="rc-meat"></div>
+    <div class="rc-cat">🥬 野菜・その他</div><div class="rc-chips" id="rc-veg"></div>
+  </div>
+
+  <button class="btn-gen" onclick="generateMenu()">✨ 今週の献立を生成</button>
+</div>
+
+<!-- Plan -->
+<div class="page" id="page-plan">
+  <div class="page-header">📅 週間献立</div>
+  <div id="plan-content">
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <p>食材を入力して<br>献立を生成してください</p>
+    </div>
+  </div>
+</div>
+
+<!-- Shopping -->
+<div class="page" id="page-shop">
+  <div class="page-header">🛒 買い物リスト</div>
+  <div id="shop-content">
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+      <p>献立を生成すると<br>自動で作成されます</p>
+    </div>
+  </div>
+</div>
+
+<!-- History -->
+<div class="page" id="page-hist">
+  <div class="page-header">📚 献立履歴</div>
+  <div id="hist-content">
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <p>保存した献立が<br>ここに表示されます</p>
+    </div>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('ingredients',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    食材入力
+  </button>
+  <button class="nav-btn" onclick="showPage('plan',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    週間献立
+  </button>
+  <button class="nav-btn" onclick="showPage('shop',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+    買い物
+  </button>
+  <button class="nav-btn" onclick="showPage('hist',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    履歴
+  </button>
+</nav>
+
+<script>
+const DAYS = ['月曜日','火曜日','水曜日','木曜日','金曜日'];
+const DAY_S = ['月','火','水','木','金'];
+const DEFAULT_EXCL = ['ニンジン','コーン','キュウリ','乳製品全般','バター'];
+
+// ─── State ───────────────────────────────────────────────
+let excludedTags = JSON.parse(localStorage.getItem('excludedTags') || 'null') || [...DEFAULT_EXCL];
+let haveTags = [], wantTags = [];
+let selRec = new Set();
+let dispRec = {fish:[],meat:[],veg:[]};
+let currentPlan = null;
+
+// ─── Gram formatter ──────────────────────────────────────
+const GPT = {'醤油':6,'みりん':6,'砂糖':3,'味噌':6,'酒':5,'オリーブ油':4,'ごま油':4,'サラダ油':4,'酢':5,'オイスターソース':6,'ナンプラー':6,'片栗粉':3,'豆板醤':6,'甜麺醤':6,'練りごま':6,'バルサミコ酢':6,'塩':6};
+function addG(s){
+  return s.replace(/(醤油|みりん|砂糖|味噌|酒|オリーブ油|ごま油|サラダ油|酢|オイスターソース|ナンプラー|片栗粉|豆板醤|甜麺醤|練りごま|バルサミコ酢|塩)\s*(大さじ|小さじ)([\d.]+)/g,(m,n,u,v)=>{
+    const g=GPT[n];if(!g)return m;
+    return `${n} ${u}${v}（約${Math.round(g*(u==='大さじ'?3:1)*parseFloat(v))}g）`;
+  });
+}
+
+// ─── Excluded Ingredients ────────────────────────────────
+function saveExcl() {
+  localStorage.setItem('excludedTags', JSON.stringify(excludedTags));
+}
+function addExcl() {
+  const el = document.getElementById('excl-input');
+  const val = el.value.trim();
+  if (!val) return;
+  const items = val.split(/[,、，]+/).map(s => s.trim()).filter(Boolean);
+  items.forEach(item => { if (!excludedTags.includes(item)) excludedTags.push(item); });
+  setTimeout(() => { el.value = ''; }, 0);
+  saveExcl();
+  renderExcl();
+}
+function removeExcl(item) {
+  excludedTags = excludedTags.filter(t => t !== item);
+  saveExcl();
+  renderExcl();
+}
+function renderExcl() {
+  document.getElementById('excl-tags').innerHTML = excludedTags.map(t =>
+    `<span class="excl-tag">${t}<span class="x" onclick="removeExcl('${t}')">×</span></span>`
+  ).join('');
+}
+document.getElementById('excl-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addExcl();
+});
+
+// ─── Recommend Pool ──────────────────────────────────────
+const REC = {
+  fish:['サーモン','ぶり','さば','タラ','えび','いか','ほたて','アジ','ツナ缶','鮭'],
+  meat:['鶏もも肉','鶏むね肉','豚こま肉','豚バラ','牛こま肉','豚ひき肉','鶏ひき肉'],
+  veg: ['玉ねぎ','キャベツ','なす','ピーマン','ブロッコリー','もやし','長ねぎ','ほうれん草','きのこ','大根','厚揚げ','木綿豆腐','卵','小松菜','パプリカ']
+};
+
+// ─── Miso Pool ───────────────────────────────────────────
+const MISO = [
+  {name:'豆腐とわかめの味噌汁',ing:['木綿豆腐 1/4丁','乾燥わかめ 3g','味噌 大さじ1','だし 300ml'],steps:['だしを沸かす。','わかめを水で戻して加え、豆腐を角切りにして入れる。','味噌を溶かして火を止める。'],sh:{'豆腐':[{n:'木綿豆腐',a1:'1/8丁',a2:'1/4丁'}]}},
+  {name:'長ねぎと油揚げの味噌汁',ing:['長ねぎ 1/2本','油揚げ 1/2枚','味噌 大さじ1','だし 300ml'],steps:['長ねぎを小口切り、油揚げを細切りにする。','だしを沸かして両方入れ、1分煮る。','味噌を溶かして完成。'],sh:{'野菜':[{n:'長ねぎ',a1:'1/4本',a2:'1/2本'}]}},
+  {name:'なすの味噌汁',ing:['なす 1本','味噌 大さじ1','だし 300ml','ごま油 小さじ1'],steps:['なすを半月切りにしてごま油で軽く炒める。','だしを加えて沸かし、なすが柔らかくなるまで煮る。','味噌を溶かして完成。'],sh:{'野菜':[{n:'なす',a1:'1/2本',a2:'1本'}]}},
+  {name:'もやしの味噌汁',ing:['もやし 1/2袋','長ねぎ 少々','味噌 大さじ1','だし 300ml'],steps:['だしを沸かしてもやしを加え、2分煮る。','味噌を溶かし、長ねぎを散らして完成。'],sh:{'野菜':[{n:'もやし',a1:'1/4袋',a2:'1/2袋'}]}},
+  {name:'玉ねぎと豆腐の味噌汁',ing:['玉ねぎ 1/4個','絹豆腐 1/4丁','味噌 大さじ1','だし 300ml'],steps:['玉ねぎを薄切りにする。','だしで玉ねぎを3分煮る。','豆腐を加えて温め、味噌を溶かす。'],sh:{'豆腐':[{n:'絹豆腐',a1:'1/8丁',a2:'1/4丁'}]}},
+  {name:'小松菜と油揚げの味噌汁',ing:['小松菜 1/2束','油揚げ 1/2枚','味噌 大さじ1','だし 300ml'],steps:['小松菜を3cm幅、油揚げを細切りにする。','だしを沸かして両方入れ、2分煮る。','味噌を溶かして完成。'],sh:{'野菜':[{n:'小松菜',a1:'1/4束',a2:'1/2束'}]}}
+];
+
+// ─── Side Pool ───────────────────────────────────────────
+const SIDES = [
+  {name:'ほうれん草のおひたし',ing:['ほうれん草 1束','醤油 大さじ1','だし 大さじ2','かつおぶし 少々'],steps:['ほうれん草を塩茹でして水気を絞り、3cm幅に切る。','醤油とだしを合わせてかける。','かつおぶしをのせる。'],sh:{'野菜':[{n:'ほうれん草',a1:'1/2束',a2:'1束'}]}},
+  {name:'きのこのごま油ソテー',ing:['しめじ・えのき 合わせて200g','ごま油 小さじ1','醤油 小さじ1','塩コショウ 少々'],steps:['きのこをほぐす。','ごま油で中火炒め、しんなりしたら醤油・塩コショウで味付け。'],sh:{'野菜':[{n:'きのこ類',a1:'100g',a2:'200g'}]}},
+  {name:'もやしのナムル',ing:['もやし 1袋','ごま油 小さじ1','醤油 小さじ1','塩 少々','白ごま 適量'],steps:['もやしをさっと茹でて水気を切る。','熱いうちにごま油・醤油・塩で和える。','白ごまを振る。'],sh:{'野菜':[{n:'もやし',a1:'1/2袋',a2:'1袋'}]}},
+  {name:'ブロッコリーのごまあえ',ing:['ブロッコリー 1/2株','練りごま 大さじ1','醤油 小さじ1','砂糖 小さじ1'],steps:['ブロッコリーを塩茹でして小房に分ける。','練りごま・醤油・砂糖を混ぜたタレで和える。'],sh:{'野菜':[{n:'ブロッコリー',a1:'1/4株',a2:'1/2株'}]}},
+  {name:'なすの焼き浸し',ing:['なす 2本','サラダ油 大さじ1','醤油 大さじ1','みりん 大さじ1','だし 大さじ2'],steps:['なすを縦半分に切り、油で両面焼く。','醤油・みりん・だしを合わせたタレに熱いうちに浸す。','冷ましながら味をなじませる。'],sh:{'野菜':[{n:'なす',a1:'1本',a2:'2本'}]}}
+];
+
+// ─── Main Dish Pool ──────────────────────────────────────
+const MAINS = [
+  {type:'fish',cuisine:'洋食',time:15,diff:2,dish:'サーモンのムニエル',protein:'サーモン',
+   tags:['サーモン','鮭'],
+   ing:['サーモン切り身 2枚','薄力粉 大さじ1','オリーブ油 大さじ1','塩コショウ 少々','バルサミコ酢 大さじ1','醤油 小さじ1'],
+   sea:'オリーブ油 大さじ1・バルサミコ酢 大さじ1・醤油 小さじ1・塩コショウ',
+   steps:['サーモンに塩コショウし、薄力粉を薄くまぶす。','フライパンにオリーブ油を熱し、皮面から中火で2分焼く。','裏返して2分焼いて取り出す。','同じフライパンにバルサミコ酢と醤油を入れて煮詰める。','サーモンにソースをかけて完成。'],
+   wife:{kcal:668,p:42,f:22,c:36},husband:{kcal:960,p:42,f:22,c:36},
+   sh:{'肉・魚':[{n:'サーモン切り身',a1:'1枚',a2:'2枚'}]}},
+
+  {type:'fish',cuisine:'和食',time:15,diff:1,dish:'ぶりの照り焼き',protein:'ぶり',
+   tags:['ぶり'],
+   ing:['ぶり切り身 2枚','醤油 大さじ2','みりん 大さじ2','砂糖 小さじ1','サラダ油 小さじ1'],
+   sea:'醤油 大さじ2・みりん 大さじ2・砂糖 小さじ1',
+   steps:['ぶりに薄く塩をして5分置き、水気をふき取る。','フライパンに油を熱し、中火で両面2分ずつ焼く。','調味料を合わせて加え、絡めながら照りを出す。','大根おろしを添えて盛り付ける。'],
+   wife:{kcal:662,p:44,f:18,c:38},husband:{kcal:958,p:44,f:18,c:38},
+   sh:{'肉・魚':[{n:'ぶり切り身',a1:'1枚',a2:'2枚'}]}},
+
+  {type:'fish',cuisine:'和食',time:60,diff:3,dish:'さばの味噌煮',protein:'さば',
+   tags:['さば'],
+   ing:['さば 2切れ','味噌 大さじ2','砂糖 大さじ1','みりん 大さじ2','酒 大さじ2','水 100ml','しょうが 1片','長ねぎ 1/2本'],
+   sea:'味噌 大さじ2・砂糖 大さじ1・みりん 大さじ2・酒 大さじ2',
+   steps:['さばは皮に切り込みを入れ、熱湯をかけて臭みを取る。','鍋に水・酒・みりんを沸かし、さばを皮目上で入れる。','落とし蓋をして中火で8分煮る。','味噌と砂糖を溶かして加え、さらに5分煮詰める。','薄切りしょうがと長ねぎを添える。'],
+   wife:{kcal:670,p:40,f:22,c:38},husband:{kcal:975,p:40,f:22,c:38},
+   sh:{'肉・魚':[{n:'さば',a1:'1切れ',a2:'2切れ'}],'野菜':[{n:'長ねぎ',a1:'1/4本',a2:'1/2本'}]}},
+
+  {type:'fish',cuisine:'中華',time:15,diff:1,dish:'えびとブロッコリーの中華炒め',protein:'えび',
+   tags:['えび','ブロッコリー'],
+   ing:['むきえび 200g','ブロッコリー 1/2株','にんにく 1片','オイスターソース 大さじ1','醤油 小さじ1','ごま油 小さじ1','サラダ油 大さじ1'],
+   sea:'オイスターソース 大さじ1・醤油 小さじ1・ごま油 小さじ1',
+   steps:['えびは背ワタを取る。ブロッコリーは小房に分けて塩茹でする。','フライパンに油とにんにくを熱し、えびを炒める。','ブロッコリーを加えてオイスターソース・醤油で味付け。','ごま油を回しかけて完成。'],
+   wife:{kcal:655,p:44,f:18,c:38},husband:{kcal:960,p:44,f:18,c:38},
+   sh:{'肉・魚':[{n:'むきえび',a1:'100g',a2:'200g'}],'野菜':[{n:'ブロッコリー',a1:'1/4株',a2:'1/2株'}]}},
+
+  {type:'fish',cuisine:'アジアン',time:20,diff:2,dish:'タラのガパオ風ソテー',protein:'タラ',
+   tags:['タラ'],
+   ing:['タラ切り身 2枚','玉ねぎ 1/2個','ピーマン 2個','卵 2個','ナンプラー 大さじ1','オイスターソース 大さじ1','砂糖 小さじ1','にんにく 1片','サラダ油 大さじ1','バジル 適量'],
+   sea:'ナンプラー 大さじ1・オイスターソース 大さじ1・砂糖 小さじ1',
+   steps:['タラに塩コショウして両面焼き、取り出す。','にんにく・玉ねぎ・ピーマンを順に炒める。','調味料を加えてタラを戻し絡める。','目玉焼きを作り、ご飯と一緒に盛り付ける。','バジルを散らして完成。'],
+   wife:{kcal:672,p:42,f:19,c:39},husband:{kcal:982,p:42,f:19,c:39},
+   sh:{'肉・魚':[{n:'タラ切り身',a1:'1枚',a2:'2枚'}],'野菜':[{n:'玉ねぎ',a1:'1/4個',a2:'1/2個'},{n:'ピーマン',a1:'1個',a2:'2個'}],'卵':[{n:'卵',a1:'1個',a2:'2個'}]}},
+
+  {type:'fish',cuisine:'洋食',time:15,diff:1,dish:'いかとほうれん草のガーリックソテー',protein:'いか',
+   tags:['いか','ほうれん草'],
+   ing:['いか 1杯','ほうれん草 1束','にんにく 2片','オリーブ油 大さじ1','塩コショウ 少々','醤油 小さじ1'],
+   sea:'オリーブ油 大さじ1・醤油 小さじ1・塩コショウ',
+   steps:['いかは輪切り、ほうれん草は4cm幅、にんにくはスライス。','オリーブ油とにんにくを熱し、いかを炒める。','ほうれん草を加えてさっと炒める。','塩コショウ・醤油で味を整えて完成。'],
+   wife:{kcal:652,p:42,f:18,c:40},husband:{kcal:955,p:42,f:18,c:40},
+   sh:{'肉・魚':[{n:'いか',a1:'1/2杯',a2:'1杯'}],'野菜':[{n:'ほうれん草',a1:'1/2束',a2:'1束'}]}},
+
+  {type:'fish',cuisine:'和食',time:10,diff:1,dish:'ほたての醤油ソテー',protein:'ほたて',
+   tags:['ほたて'],
+   ing:['ほたて貝柱 8個','醤油 大さじ1','みりん 大さじ1','にんにく 1片','オリーブ油 大さじ1','小松菜 1束'],
+   sea:'醤油 大さじ1・みりん 大さじ1',
+   steps:['ほたては水気をふき、塩コショウする。','オリーブ油とにんにくを熱し、強火で両面1分ずつ焼く。','みりん・醤油を加えて絡める。','塩茹でした小松菜を添えて完成。'],
+   wife:{kcal:658,p:44,f:17,c:39},husband:{kcal:962,p:44,f:17,c:39},
+   sh:{'肉・魚':[{n:'ほたて貝柱',a1:'4個',a2:'8個'}],'野菜':[{n:'小松菜',a1:'1/2束',a2:'1束'}]}},
+
+  {type:'meat',cuisine:'和食',time:15,diff:1,dish:'鶏もも肉の照り焼き',protein:'鶏もも肉',
+   tags:['鶏もも肉'],
+   ing:['鶏もも肉 400g','醤油 大さじ2','みりん 大さじ2','砂糖 小さじ1','サラダ油 小さじ1'],
+   sea:'醤油 大さじ2・みりん 大さじ2・砂糖 小さじ1',
+   steps:['鶏もも肉の厚い部分に切り込みを入れ、フォークで数か所刺す。','フライパンに油を熱し、皮目から中火で4分焼く。','裏返して蓋をし、3分蒸し焼き。','調味料を合わせて加え、絡めながら照りを出す。','食べやすく切って盛り付ける。'],
+   wife:{kcal:665,p:40,f:21,c:39},husband:{kcal:975,p:40,f:21,c:39},
+   sh:{'肉・魚':[{n:'鶏もも肉',a1:'200g',a2:'400g'}]}},
+
+  {type:'meat',cuisine:'中華',time:15,diff:2,dish:'麻婆豆腐',protein:'豚ひき肉',
+   tags:['豚ひき肉','木綿豆腐'],
+   ing:['豚ひき肉 150g','木綿豆腐 1丁','豆板醤 小さじ1','甜麺醤 小さじ2','醤油 大さじ1','鶏がらスープ 200ml','片栗粉 大さじ1（水倍量）','ごま油 小さじ1','長ねぎ 1/2本'],
+   sea:'豆板醤 小さじ1・甜麺醤 小さじ2・醤油 大さじ1・ごま油 小さじ1',
+   steps:['にんにく・しょうがをみじん切りにしてごま油で炒める。','豚ひき肉を加えて炒める。','豆板醤・甜麺醤を加えて香りを出す。','鶏がらスープと醤油を加え、豆腐を入れて3分煮る。','水溶き片栗粉でとろみをつけ、ねぎを散らす。'],
+   wife:{kcal:658,p:38,f:22,c:40},husband:{kcal:968,p:38,f:22,c:40},
+   sh:{'肉・魚':[{n:'豚ひき肉',a1:'75g',a2:'150g'}],'豆腐':[{n:'木綿豆腐',a1:'1/2丁',a2:'1丁'}]}},
+
+  {type:'meat',cuisine:'洋食',time:15,diff:1,dish:'豚こまとキャベツのガーリック醤油炒め',protein:'豚こま肉',
+   tags:['豚こま肉','キャベツ'],
+   ing:['豚こま肉 200g','キャベツ 1/4個','にんにく 2片','オリーブ油 大さじ1','醤油 大さじ1','酒 大さじ1','塩コショウ 少々'],
+   sea:'醤油 大さじ1・酒 大さじ1・オリーブ油 大さじ1・塩コショウ',
+   steps:['キャベツをざく切り、にんにくをスライスする。','オリーブ油とにんにくを熱し、香りが出るまで炒める。','豚こまを加えて色が変わるまで炒める。','キャベツを加えて強火で炒め、醤油・酒で味付け。','塩コショウで調えて完成。'],
+   wife:{kcal:660,p:39,f:22,c:39},husband:{kcal:970,p:39,f:22,c:39},
+   sh:{'肉・魚':[{n:'豚こま肉',a1:'100g',a2:'200g'}],'野菜':[{n:'キャベツ',a1:'1/8個',a2:'1/4個'}]}},
+
+  {type:'meat',cuisine:'中華',time:20,diff:2,dish:'鶏むね肉のバンバンジー',protein:'鶏むね肉',
+   tags:['鶏むね肉','もやし'],
+   ing:['鶏むね肉 350g','もやし 1袋','練りごま 大さじ2','醤油 大さじ1','酢 大さじ1','砂糖 小さじ2','ごま油 小さじ1','ラー油 適量'],
+   sea:'練りごま 大さじ2・醤油 大さじ1・酢 大さじ1・砂糖 小さじ2・ごま油 小さじ1',
+   steps:['鶏むね肉は塩少々を加えた水から茹で、沸騰後弱火で8分。','粗熱が取れたら手で細く裂く。','もやしはさっと茹でて水気を切る。','タレの材料をよく混ぜる。','器にもやし・鶏肉を盛りタレをかけ、ラー油を垂らす。'],
+   wife:{kcal:655,p:44,f:17,c:39},husband:{kcal:962,p:44,f:17,c:39},
+   sh:{'肉・魚':[{n:'鶏むね肉',a1:'175g',a2:'350g'}],'野菜':[{n:'もやし',a1:'1/2袋',a2:'1袋'}]}},
+
+  {type:'meat',cuisine:'和食',time:15,diff:1,dish:'牛こまとなすの味噌炒め',protein:'牛こま肉',
+   tags:['牛こま肉','なす'],
+   ing:['牛こま肉 200g','なす 3本','味噌 大さじ1','みりん 大さじ1','砂糖 小さじ1','醤油 小さじ1','ごま油 大さじ1','にんにく 1片'],
+   sea:'味噌 大さじ1・みりん 大さじ1・砂糖 小さじ1・醤油 小さじ1',
+   steps:['なすは乱切りにして水にさらし、水気を切る。','ごま油でにんにく・牛こまを炒める。','なすを加えて中火で3〜4分炒める。','合わせた調味料を加えて全体に絡める。','ごまを振って完成。'],
+   wife:{kcal:668,p:38,f:23,c:39},husband:{kcal:978,p:38,f:23,c:39},
+   sh:{'肉・魚':[{n:'牛こま肉',a1:'100g',a2:'200g'}],'野菜':[{n:'なす',a1:'1〜2本',a2:'3本'}]}},
+
+  {type:'meat',cuisine:'和食',time:60,diff:3,dish:'豚バラと大根のこっくり煮',protein:'豚バラ肉',
+   tags:['豚バラ','大根'],
+   ing:['豚バラ肉 250g','大根 1/2本','醤油 大さじ3','みりん 大さじ2','砂糖 大さじ1','酒 大さじ2','だし 400ml','しょうが 1片'],
+   sea:'醤油 大さじ3・みりん 大さじ2・砂糖 大さじ1・酒 大さじ2',
+   steps:['豚バラは5cm幅に切り、熱湯で下茹でしてアクを取る。','大根は3cm輪切りにして面取りし、米のとぎ汁で下茹で10分。','鍋にだし・調味料・豚バラ・大根・しょうがを入れる。','沸騰したら落とし蓋をして弱火で30分煮る。','器に盛り、煮汁をかけて完成。'],
+   wife:{kcal:672,p:36,f:25,c:39},husband:{kcal:988,p:36,f:25,c:39},
+   sh:{'肉・魚':[{n:'豚バラ肉',a1:'125g',a2:'250g'}],'野菜':[{n:'大根',a1:'1/4本',a2:'1/2本'}]}},
+
+  {type:'meat',cuisine:'和食',time:15,diff:1,dish:'鶏ひき肉のそぼろ丼',protein:'鶏ひき肉',
+   tags:['鶏ひき肉','卵'],
+   ing:['鶏ひき肉 300g','卵 2個','醤油 大さじ2','みりん 大さじ2','砂糖 大さじ1','酒 大さじ1','しょうが 1片'],
+   sea:'醤油 大さじ2・みりん 大さじ2・砂糖 大さじ1・酒 大さじ1',
+   steps:['しょうがをすりおろす。','フライパンに鶏ひき肉・調味料・しょうがを入れて混ぜ、中火にかける。','菜箸4〜5本で混ぜながらそぼろにする。','炒り卵を別フライパンで作る（砂糖・醤油各少々）。','丼にご飯・そぼろ・炒り卵を彩りよく盛る。'],
+   wife:{kcal:662,p:40,f:20,c:40},husband:{kcal:972,p:40,f:20,c:40},
+   sh:{'肉・魚':[{n:'鶏ひき肉',a1:'150g',a2:'300g'}],'卵':[{n:'卵',a1:'1個',a2:'2個'}]}},
+
+  {type:'meat',cuisine:'中華',time:15,diff:1,dish:'豚こまとパプリカのオイスター炒め',protein:'豚こま肉',
+   tags:['豚こま肉','パプリカ','もやし'],
+   ing:['豚こま肉 200g','パプリカ（赤・黄）各1個','もやし 1/2袋','にんにく 1片','オイスターソース 大さじ1','醤油 小さじ1','ごま油 小さじ1','片栗粉 小さじ1','サラダ油 大さじ1'],
+   sea:'オイスターソース 大さじ1・醤油 小さじ1・ごま油 小さじ1',
+   steps:['豚こまに片栗粉をまぶす。パプリカは細切りにする。','油とにんにくを熱し、豚こまを炒める。','パプリカ・もやしを加えて強火で炒める。','オイスターソース・醤油を加えて絡める。','ごま油を回しかけて完成。'],
+   wife:{kcal:658,p:38,f:22,c:40},husband:{kcal:965,p:38,f:22,c:40},
+   sh:{'肉・魚':[{n:'豚こま肉',a1:'100g',a2:'200g'}],'野菜':[{n:'パプリカ（赤・黄）',a1:'各1/2個',a2:'各1個'},{n:'もやし',a1:'1/4袋',a2:'1/2袋'}]}}
+];
+
+// ─── Nav ─────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='hist') renderHist();
+}
+
+// ─── User Tags ───────────────────────────────────────────
+function addTag(type) {
+  const el = document.getElementById(type+'-input');
+  const val = el.value.trim();
+  if (!val) return;
+  const items = val.split(/[,、，]+/).map(s=>s.trim()).filter(Boolean);
+  items.forEach(item => {
+    if(type==='have'){ if(!haveTags.includes(item)) haveTags.push(item); }
+    else { if(!wantTags.includes(item)) wantTags.push(item); }
+  });
+  setTimeout(() => { el.value = ''; }, 0);
+  renderTags();
+}
+function removeTag(type, item) {
+  if(type==='have') haveTags=haveTags.filter(t=>t!==item);
+  else wantTags=wantTags.filter(t=>t!==item);
+  renderTags();
+}
+function renderTags() {
+  ['have','want'].forEach(type=>{
+    const arr = type==='have'?haveTags:wantTags;
+    document.getElementById(type+'-tags').innerHTML = arr.map(t=>
+      `<span class="tag">${t}<span class="x" onclick="removeTag('${type}','${t}')">×</span></span>`
+    ).join('');
+  });
+}
+['have-input','want-input'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{
+    if(e.key==='Enter') addTag(id.replace('-input',''));
+  });
+});
+
+// ─── Recommend Chips ─────────────────────────────────────
+function shuffleRec() {
+  const sh=arr=>[...arr].sort(()=>Math.random()-.5);
+  dispRec={fish:sh(REC.fish).slice(0,6),meat:sh(REC.meat).slice(0,5),veg:sh(REC.veg).slice(0,7)};
+  renderRec();
+}
+function toggleRec(item) {
+  selRec.has(item)?selRec.delete(item):selRec.add(item);
+  renderRec();
+}
+function renderRec() {
+  ['fish','meat','veg'].forEach(cat=>{
+    document.getElementById('rc-'+cat).innerHTML = dispRec[cat].map(item=>{
+      const s=selRec.has(item);
+      return `<span class="rc-chip${s?' sel':''}" onclick="toggleRec('${item}')">${item}</span>`;
+    }).join('');
+  });
+  const n=selRec.size;
+  const el=document.getElementById('rc-count');
+  el.textContent=n?n+'個選択':''; el.style.display=n?'inline':'none';
+}
+
+// ─── Generate ────────────────────────────────────────────
+function generateMenu() {
+  const subs=['食材を分析しています','カロリーを計算しています','献立を組み合わせています','買い物リストを作成しています'];
+  let i=0;
+  document.getElementById('load-sub').textContent=subs[0];
+  document.getElementById('loading').classList.add('show');
+  const iv=setInterval(()=>{i=Math.min(i+1,subs.length-1);document.getElementById('load-sub').textContent=subs[i];},450);
+  setTimeout(()=>{
+    clearInterval(iv);
+    currentPlan=buildPlan();
+    renderPlan(); renderShop();
+    document.getElementById('loading').classList.remove('show');
+    showPage('plan',document.querySelectorAll('.nav-btn')[1]);
+  },1900);
+}
+
+function buildPlan() {
+  const userIng=[...haveTags,...wantTags,...Array.from(selRec)];
+  const recent=JSON.parse(localStorage.getItem('recentDishes')||'[]');
+  const sh=arr=>[...arr].sort(()=>Math.random()-.5);
+
+  const scoreMain=m=>{
+    let s=m.tags.reduce((acc,t)=>acc+(userIng.some(u=>t.includes(u)||u.includes(t))?2:0),0);
+    if(recent.includes(m.dish)) s-=8;
+    return s;
+  };
+
+  const fish=sh(MAINS.filter(m=>m.type==='fish')).sort((a,b)=>scoreMain(b)-scoreMain(a));
+  const meat=sh(MAINS.filter(m=>m.type==='meat')).sort((a,b)=>scoreMain(b)-scoreMain(a));
+
+  const pickVar=(list,count)=>{
+    const res=[]; const used=new Set();
+    for(const m of list){if(res.length>=count)break;if(!used.has(m.cuisine)){res.push(m);used.add(m.cuisine);}}
+    for(const m of list){if(res.length>=count)break;if(!res.includes(m))res.push(m);}
+    return res;
+  };
+
+  const selFish=pickVar(fish,2);
+  const selMeat=pickVar(meat,3);
+  const mains=[selMeat[0],selFish[0],selMeat[1],selFish[1],selMeat[2]];
+
+  const shMiso=sh([...MISO]);
+  const shSide=sh([...SIDES]);
+  const sideIdx=sh([0,1,2,3,4]).slice(0,2);
+
+  return mains.map((main,i)=>({main,miso:shMiso[i%shMiso.length],side:sideIdx.includes(i)?shSide[i%shSide.length]:null}));
+}
+
+// ─── Render Plan ─────────────────────────────────────────
+function stars(n){return '★'.repeat(n)+'☆'.repeat(3-n);}
+
+function renderPlan() {
+  if(!currentPlan) return;
+  const avgWKcal=Math.round(currentPlan.reduce((a,d)=>a+d.main.wife.kcal,0)/5);
+  const avgHKcal=Math.round(currentPlan.reduce((a,d)=>a+d.main.husband.kcal,0)/5);
+  const wp=currentPlan[0].main.wife, hp=currentPlan[0].main.husband;
+
+  const summary=`
+    <div class="pfc-summary">
+      <h3>今週の栄養サマリー（1日平均）</h3>
+      <div class="pfc-sum-row">
+        <div class="pfc-sum-box">
+          <div class="who">妻</div><div class="avg-kcal">${avgWKcal} kcal</div>
+          <div class="pfc-bar"><div class="pp" style="width:${wp.p}%"></div><div class="pf" style="width:${wp.f}%"></div><div class="pc" style="width:${wp.c}%"></div></div>
+          <div class="pfc-label">P${wp.p}% F${wp.f}% C${wp.c}%</div>
+        </div>
+        <div class="pfc-sum-box">
+          <div class="who">夫</div><div class="avg-kcal">${avgHKcal} kcal</div>
+          <div class="pfc-bar"><div class="pp" style="width:${hp.p}%"></div><div class="pf" style="width:${hp.f}%"></div><div class="pc" style="width:${hp.c}%"></div></div>
+          <div class="pfc-label">P${hp.p}% F${hp.f}% C${hp.c}%</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn-save" onclick="savePlan()">💾 この献立を保存する</button>`;
+
+  const cards=currentPlan.map((d,i)=>{
+    const {main,miso,side}=d;
+    const misoBlock=`
+      <div class="miso-block">
+        <div class="miso-title">🥣 ${miso.name}</div>
+        <div class="ichips">${miso.ing.map(x=>`<span class="ichip">${x}</span>`).join('')}</div>
+        <ol class="steps">${miso.steps.map(s=>`<li><span>${s}</span></li>`).join('')}</ol>
+      </div>`;
+    const sideBlock=side?`
+      <div class="side-block">
+        <div class="side-title">🥗 ${side.name}</div>
+        <div class="ichips">${side.ing.map(x=>`<span class="ichip">${addG(x)}</span>`).join('')}</div>
+        <ol class="steps">${side.steps.map(s=>`<li><span>${s}</span></li>`).join('')}</ol>
+      </div>`:'';
+    return `
+      <div class="day-card" id="dc-${i}">
+        <div class="day-hd" onclick="toggleDay(${i})">
+          <div class="day-label">${DAYS[i]}</div>
+          <div class="day-meta">
+            <span class="badge ${main.type==='fish'?'bf':'bm'}">${main.type==='fish'?'🐟 魚':'🥩 肉'}</span>
+            <span class="badge bc">${main.cuisine}</span>
+            <span class="bt">⏱ ${main.time}分</span>
+            <span class="stars">${stars(main.diff)}</span>
+            <span class="chev">▼</span>
+          </div>
+        </div>
+        <div class="day-body">
+          <div class="cal-row">
+            <div class="cal-box">
+              <div class="who">妻</div><div class="kcal">${main.wife.kcal} kcal</div>
+              <div class="pfc-bar"><div class="pp" style="width:${main.wife.p}%"></div><div class="pf" style="width:${main.wife.f}%"></div><div class="pc" style="width:${main.wife.c}%"></div></div>
+              <div class="pfc-l">P${main.wife.p}% F${main.wife.f}% C${main.wife.c}%</div>
+            </div>
+            <div class="cal-box">
+              <div class="who">夫</div><div class="kcal">${main.husband.kcal} kcal</div>
+              <div class="pfc-bar"><div class="pp" style="width:${main.husband.p}%"></div><div class="pf" style="width:${main.husband.f}%"></div><div class="pc" style="width:${main.husband.c}%"></div></div>
+              <div class="pfc-l">P${main.husband.p}% F${main.husband.f}% C${main.husband.c}%</div>
+            </div>
+          </div>
+          <div class="sub">🍽️ メインおかず</div>
+          <div class="dish-name">${main.dish}</div>
+          <span class="protein-tag">たんぱく質源：${main.protein}</span>
+          <div class="ichips">${main.ing.map(x=>`<span class="ichip">${x}</span>`).join('')}</div>
+          <div class="sub">調味料の量</div>
+          <div class="season-box">${addG(main.sea)}</div>
+          <div class="sub">作り方</div>
+          <ol class="steps">${main.steps.map(s=>`<li><span>${s}</span></li>`).join('')}</ol>
+          ${misoBlock}${sideBlock}
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('plan-content').innerHTML=summary+cards;
+  document.getElementById('dc-0').classList.add('open');
+}
+
+function toggleDay(i){document.getElementById('dc-'+i).classList.toggle('open');}
+
+// ─── Render Shop ─────────────────────────────────────────
+function renderShop() {
+  if(!currentPlan) return;
+  const merged={};
+  const add=(cat,item)=>{if(!merged[cat])merged[cat]={};if(!merged[cat][item.n])merged[cat][item.n]={a1:item.a1,a2:item.a2};};
+  currentPlan.forEach(({main,miso,side})=>{
+    Object.entries(main.sh||{}).forEach(([c,items])=>items.forEach(it=>add(c,it)));
+    Object.entries(miso.sh||{}).forEach(([c,items])=>items.forEach(it=>add(c,it)));
+    if(side) Object.entries(side.sh||{}).forEach(([c,items])=>items.forEach(it=>add(c,it)));
+  });
+  merged['調味料・乾物']={...merged['調味料・乾物'],'醤油':{a1:'適量',a2:'適量'},'みりん':{a1:'適量',a2:'適量'},'砂糖':{a1:'適量',a2:'適量'},'味噌':{a1:'適量',a2:'適量'},'ごま油':{a1:'適量',a2:'適量'},'オリーブ油':{a1:'適量',a2:'適量'},'だし（顆粒）':{a1:'適量',a2:'適量'}};
+  merged['穀物']={'白米（妻150g・夫250g）':{a1:'150g',a2:'150g+250g'}};
+  const ORDER=['肉・魚','野菜','豆腐','卵','調味料・乾物','穀物'];
+  const ICO={'肉・魚':'🥩','野菜':'🥬','豆腐':'🫘','卵':'🥚','調味料・乾物':'🧂','穀物':'🍚'};
+  const cats=[...ORDER.filter(c=>merged[c]),...Object.keys(merged).filter(c=>!ORDER.includes(c))];
+  let idc=0;
+  const html=cats.map(cat=>{
+    const items=merged[cat], count=Object.keys(items).length;
+    const rows=Object.entries(items).map(([name,{a1,a2}])=>{
+      const id='si-'+(idc++);
+      return `<div class="shop-item" id="wrap-${id}"><input type="checkbox" id="${id}" onchange="chkItem('${id}')"><label for="${id}">${name}</label><div class="shop-amts"><div class="shop-amt1">1人前 ${a1}</div><div class="shop-amt2">2人前 ${a2}</div></div></div>`;
+    }).join('');
+    return `<div class="shop-cat open"><div class="shop-cat-hd" onclick="toggleShopCat(this)"><span>${ICO[cat]||'📦'} ${cat}</span><span class="shop-cnt">${count}点</span></div><div class="shop-items">${rows}</div></div>`;
+  }).join('');
+  document.getElementById('shop-content').innerHTML=html+`<button class="btn-clear" onclick="clearChk()">チェック済みをリセット</button>`;
+}
+
+function chkItem(id){document.getElementById('wrap-'+id).classList.toggle('chk',document.getElementById(id).checked);}
+function toggleShopCat(hd){const c=hd.parentElement;c.classList.toggle('open');c.querySelector('.shop-items').style.display=c.classList.contains('open')?'block':'none';}
+function clearChk(){document.querySelectorAll('.shop-item.chk').forEach(el=>{el.classList.remove('chk');el.querySelector('input').checked=false;});}
+
+// ─── Save / History ──────────────────────────────────────
+function savePlan() {
+  if(!currentPlan) return;
+  const saved=JSON.parse(localStorage.getItem('savedPlans')||'[]');
+  const dishes=currentPlan.map(d=>d.main.dish);
+  const now=new Date();
+  saved.unshift({savedAt:now.toISOString(),label:`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`,dishes,plan:currentPlan});
+  if(saved.length>10) saved.pop();
+  localStorage.setItem('savedPlans',JSON.stringify(saved));
+  localStorage.setItem('recentDishes',JSON.stringify(dishes));
+  showToast('💾 献立を保存しました！');
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function renderHist() {
+  const saved=JSON.parse(localStorage.getItem('savedPlans')||'[]');
+  if(!saved.length){document.getElementById('hist-content').innerHTML=`<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg><p>保存した献立が<br>ここに表示されます</p></div>`;return;}
+  document.getElementById('hist-content').innerHTML=saved.map((e,idx)=>`
+    <div class="hist-entry">
+      <div class="hist-hd" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="hist-date">📅 ${e.label}</span>
+        <button class="btn-del" onclick="event.stopPropagation();delHist(${idx})">削除</button>
+      </div>
+      <div class="hist-body">
+        ${e.dishes.map((d,i)=>`<div class="hist-dish"><span class="hist-day">${DAY_S[i]}</span>${d}</div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function delHist(idx) {
+  const saved=JSON.parse(localStorage.getItem('savedPlans')||'[]');
+  saved.splice(idx,1);
+  localStorage.setItem('savedPlans',JSON.stringify(saved));
+  renderHist();
+}
+
+// ─── Init ────────────────────────────────────────────────
+renderExcl();
+shuffleRec();
+</script>
+</body>
+</html>
